@@ -89,22 +89,6 @@
 }
 
 - (void)cleanup {
-//    // See if we are subscribed to a characteristic on the peripheral
-//    if (self.sensorTag.services != nil) {
-//        for (CBService *service in self.sensorTag.services) {
-//            if (service.characteristics != nil) {
-//                for (CBCharacteristic *characteristic in service.characteristics) {
-//                    if ([characteristic.UUID isEqual:[CBUUID UUIDWithString:TRANSFER_CHARACTERISTIC_UUID]]) {
-//                        if (characteristic.isNotifying) {
-//                            [self.sensorTag setNotifyValue:NO forCharacteristic:characteristic];
-//                            return;
-//                        }
-//                    }
-//                }
-//            }
-//        }
-//    }
-//    
     [_centralManager cancelPeripheralConnection:self.sensorTag];
 }
 
@@ -140,22 +124,6 @@
     self.captionLabel.hidden = NO;
     self.temperatureLabel.font = [UIFont fontWithName:@"HelveticaNeue-Thin" size:81];
     self.temperatureLabel.text = [NSString stringWithFormat:@" %ld°", (long)temp];
-}
-
-- (void)setBackgroundGradient:(NSInteger)temperature {
-    /*
-     let colorStart: AnyObject = UIColor.blackColor().CGColor
-     let colorEnd:AnyObject = UIColor.clearColor().CGColor
-     
-     var gradientLayer = CAGradientLayer()
-     gradientLayer.frame = self.gradientBackgroundView.bounds
-     gradientLayer.colors = [colorStart, colorEnd]
-     gradientLayer.startPoint = CGPoint(x: 0, y: 0)
-     gradientLayer.endPoint = CGPoint(x: 1, y: 1)
-     self.gradientBackgroundView.layer.mask = gradientLayer
-*/
-    
-    
 }
 
 - (void)drawCircle {
@@ -211,7 +179,7 @@
     //       we already know that it's 2 16-bit integers, but this feels a bit more flexible.
     NSUInteger dataLength = dataBytes.length / 2;
     
-    // craeate an array to contain the 16-bit values
+    // create an array to contain the 16-bit values
     uint16_t dataArray[dataLength];
     for (int i = 0; i < dataLength; i++) {
         dataArray[i] = 0;
@@ -229,8 +197,6 @@
 //    uint16_t rawHumidityTemp = dataArray[SENSOR_DATA_INDEX_HUMIDITY_TEMP];
 //    double calculatedTemperature = calcHumidityTemperature(rawHumidityTemp);
 //    NSLog(@"*** HUMIDITY SENSOR - TEMPERATURE: %f", calculatedTemperature);
-
-    
 }
 
 
@@ -292,16 +258,11 @@ double calculateRelativeHumidity(uint16_t rawH) {
             break;
         default:
             state = @"The state of the BLE Manager is unknown.";
-            
     }
     
     if (showAlert) {
-        UIAlertController *ac = [UIAlertController alertControllerWithTitle:@"Central Manager State"
-                                                                    message:state
-                                                             preferredStyle:UIAlertControllerStyleAlert];
-        UIAlertAction *okAction = [UIAlertAction actionWithTitle:@"OK"
-                                                           style:UIAlertActionStyleCancel
-                                                         handler:nil];
+        UIAlertController *ac = [UIAlertController alertControllerWithTitle:@"Central Manager State" message:state preferredStyle:UIAlertControllerStyleAlert];
+        UIAlertAction *okAction = [UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleCancel handler:nil];
         [ac addAction:okAction];
         [self presentViewController:ac animated:YES completion:nil];
     }
@@ -309,15 +270,11 @@ double calculateRelativeHumidity(uint16_t rawH) {
 }
 
 - (void)centralManager:(CBCentralManager *)central didDiscoverPeripheral:(CBPeripheral *)peripheral advertisementData:(NSDictionary *)advertisementData RSSI:(NSNumber *)RSSI {
-
     // Retrieve the peripheral name from the advertisement data using the "kCBAdvDataLocalName" key
     NSString *peripheralName = [advertisementData objectForKey:@"kCBAdvDataLocalName"];
-    NSLog(@"NEXT PERIPHERAL: %@", peripheral.identifier.UUIDString);
-    NSLog(@"NEXT PERIPHERAL NAME: %@", peripheralName);
-    
+    NSLog(@"NEXT PERIPHERAL: %@ (%@)", peripheralName, peripheral.identifier.UUIDString);
     if (peripheralName) {
         if ([peripheralName isEqualToString:SENSOR_TAG_NAME]) {
-            NSLog(@"SENSOR TAG FOUND! ADDING NOW!!!");
             self.keepScanning = NO;
             
             // save a reference to the sensor tag
@@ -330,10 +287,8 @@ double calculateRelativeHumidity(uint16_t rawH) {
     }
 }
 
-
 - (void)centralManager:(CBCentralManager *)central didConnectPeripheral:(CBPeripheral *)peripheral {
     NSLog(@"**** SUCCESSFULLY CONNECTED TO SENSOR TAG!!!");
-
     self.temperatureLabel.font = [UIFont fontWithName:@"HelveticaNeue-Thin" size:56];
     self.temperatureLabel.text = @"Connected";
 
@@ -359,7 +314,7 @@ double calculateRelativeHumidity(uint16_t rawH) {
 - (void)peripheral:(CBPeripheral *)peripheral didDiscoverServices:(NSError *)error {
     // Core Bluetooth creates an array of CBService objects —- one for each service that is discovered on the peripheral.
     for (CBService *service in peripheral.services) {
-        NSLog(@"Discovered service %@", service);
+        NSLog(@"Discovered service: %@", service);
         if (([service.UUID isEqual:[CBUUID UUIDWithString:UUID_TEMPERATURE_SERVICE]]) ||
             ([service.UUID isEqual:[CBUUID UUIDWithString:UUID_HUMIDITY_SERVICE]])) {
             [peripheral discoverCharacteristics:nil forService:service];
@@ -374,24 +329,24 @@ double calculateRelativeHumidity(uint16_t rawH) {
         
         // Temperature
         if ([characteristic.UUID isEqual:[CBUUID UUIDWithString:UUID_TEMPERATURE_DATA]]) {
-            // Enable sensor notification
+            // Enable Temperature Sensor notification
             [self.sensorTag setNotifyValue:YES forCharacteristic:characteristic];
         }
         
         if ([characteristic.UUID isEqual:[CBUUID UUIDWithString:UUID_TEMPERATURE_CONFIG]]) {
-            // Enable sensor
+            // Enable Temperature Sensor
             [self.sensorTag writeValue:enableBytes forCharacteristic:characteristic type:CBCharacteristicWriteWithResponse];
         }
         
         
         // Humidity
         if ([characteristic.UUID isEqual:[CBUUID UUIDWithString:UUID_HUMIDITY_DATA]]) {
-            // Enable sensor notification
+            // Enable Humidity Sensor notification
             [self.sensorTag setNotifyValue:YES forCharacteristic:characteristic];
         }
         
         if ([characteristic.UUID isEqual:[CBUUID UUIDWithString:UUID_HUMIDITY_CONFIG]]) {
-            // Enable sensor
+            // Enable Humidity Sensor
             [self.sensorTag writeValue:enableBytes forCharacteristic:characteristic type:CBCharacteristicWriteWithResponse];
         }
     }
@@ -411,8 +366,5 @@ double calculateRelativeHumidity(uint16_t rawH) {
         }
     }
 }
-
-
-
 
 @end
